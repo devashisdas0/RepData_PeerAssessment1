@@ -7,19 +7,90 @@ output:
 
 
 ## Loading and preprocessing the data
-
+```{r}
+echo=TRUE
+activity <- read.csv("C:/Users/devdas2/Desktop/Cert_R_Projects/activity.csv", header=TRUE)
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r}
+cleaned <- activity[complete.cases(activity), ]
+days_steps <- aggregate(steps ~ date, cleaned, sum)
+hist(days_steps$steps, xlab = "Number of Steps", main = "Steps per day")
 
+# Mean
+mean(days_steps$steps)
+
+#Median
+median(days_steps$steps)
+```
 
 
 ## What is the average daily activity pattern?
+```{r}
+avg_steps <- aggregate(steps ~ interval, cleaned, mean)
+plot(avg_steps$interval, avg_steps$steps, type='l', xlab="Intervals", ylab="Average Steps", main="Average Steps Interval")
 
+max_interval <- which.max(avg_steps$steps)
+avg_steps[max_interval, ]$interval
+```
 
 
 ## Imputing missing values
 
+```{r}
+missing_values <- activity[!complete.cases(activity), ]
+rows_missing <- nrow(missing_values)
+
+for (i in 1:rows_missing) {
+    if(is.na(activity$steps[i])) {
+        val <- avg_steps$steps[which(avg_steps$interval == activity$interval[i])]
+        activity$steps[i] <- val 
+    }
+}
+
+imputed <- aggregate(steps ~ date, activity, sum)
+hist(imputed$steps, main = "Steps with Imputed Values", xlab = "Steps")
+
+# Mean and Median again
+mean(imputed$steps)
+median(imputed$steps)
+
+
+```
+* Above results show Mean and Median have not changed after imputation  showing there is no impact from imputation
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+week_day <- function(date_val) {
+    wd_val <- weekdays(as.Date(date_val, '%Y-%m-%d'))
+    if  (!(wd_val == 'Saturday' || wd_val == 'Sunday')) {
+        w <- 'Weekday'
+    } else {
+        w <- 'Weekend'
+    }
+    w
+}
+
+activity$weekday <- as.factor(sapply(activity$date, week_day))
+```
+
+```{r}
+# Graphing 
+library(ggplot2)
+
+imputed <- aggregate(steps ~ interval+weekday, activity, mean)
+
+# Create the plot
+wd_plot <- ggplot(imputed, aes(interval, steps)) + ggtitle("Weekday vs Weekend Steps") +
+    geom_line(stat = "identity", aes(colour = weekday)) +
+    labs(x="5 min Time Interval", y=expression("Steps")) +
+    facet_grid(weekday ~ .)
+    
+wd_plot
+
+
+
+```
